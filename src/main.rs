@@ -68,7 +68,7 @@ pub enum Instruction {
 }
 
 pub fn main() {
-    let rom = include_bytes!("../roms/ibm-logo.ch8");
+    let rom = std::fs::read("roms/ibm-logo.ch8").expect("failed to read ROM at given path");
 
     let instructions_per_second = 700;
     let instr_delay_ms = 1000.0 / instructions_per_second as f64;
@@ -97,7 +97,7 @@ pub fn main() {
     ];
 
     memory[0x0..fonts.len()].copy_from_slice(&fonts);
-    memory[0x200..(0x200 + rom.len())].copy_from_slice(rom);
+    memory[0x200..(0x200 + rom.len())].copy_from_slice(&rom);
 
     let mut index_register = 0u16;
 
