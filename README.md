@@ -3,6 +3,8 @@
 We implement a simple CHIP-8 interpreter following
 <https://tobiasvl.github.io/blog/write-a-chip-8-emulator/>.
 
+![Interpreter showing the IBM logo](./screenshot.png)
+
 ## Specifications
 
 CHIP-8 has:
