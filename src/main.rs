@@ -442,7 +442,8 @@ fn execute(
         Instruction::JumpWithOffset(loc) => {
             // This follows the COSMAC VIP interpreter to jump to address `NNN` plus value in
             // register V0.
-            *program_counter = *variable_registers.get(&VariableRegister::V0).unwrap() as u16 + loc;
+            *program_counter= loc;
+            //*program_counter = *variable_registers.get(&VariableRegister::V0).unwrap() as u16 + loc;
         }
         Instruction::Pop => {
             let Some(loc) = stack.pop() else {
@@ -466,8 +467,8 @@ fn execute(
             *index_register = imm;
         }
         Instruction::Display { x, y, n } => {
-            let x = variable_registers.get(&x).unwrap() & 63;
-            let y = variable_registers.get(&y).unwrap() & 31;
+            let x = (variable_registers.get(&x).unwrap() & 63) as u64;
+            let y = (variable_registers.get(&y).unwrap() & 31) as u64;
             variable_registers
                 .entry(VariableRegister::VF)
                 .and_modify(|v| *v = 0);
@@ -477,14 +478,14 @@ fn execute(
                 y,
                 &memory[(*index_register as usize)..((*index_register + n as u16) as usize)]
             );
-            for j in 0..n {
+            for j in 0u64..n as u64{
                 if y + j >= 32 {
                     break;
                 }
 
                 let sprite_byte = memory[(*index_register + j as u16) as usize];
                 println!("sprite_byte: {:X}", sprite_byte);
-                for i in 0..8 {
+                for i in 0u64..8 {
                     if x + i >= 64 {
                         break;
                     }
