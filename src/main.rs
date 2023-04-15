@@ -96,8 +96,13 @@ pub enum Instruction {
 }
 
 pub fn main() {
-    let rom = std::fs::read("roms/ibm-logo.ch8").expect("failed to read ROM at given path");
+    let args = std::env::args().collect::<Vec<String>>();
+    dbg!(&args);
+    let rom = std::fs::read(&args[1]).expect("failed to read ROM at given path");
+    run(&rom);
+}
 
+fn run(rom: &[u8]) {
     let mut memory = vec![0u8; 4096];
 
     let fonts = [
@@ -120,7 +125,7 @@ pub fn main() {
     ];
 
     memory[0x0..fonts.len()].copy_from_slice(&fonts);
-    memory[0x200..(0x200 + rom.len())].copy_from_slice(&rom);
+    memory[0x200..(0x200 + rom.len())].copy_from_slice(rom);
 
     let mut index_register = 0u16;
 
