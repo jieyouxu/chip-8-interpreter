@@ -56,6 +56,7 @@ impl From<u8> for VariableRegister {
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Instruction {
     ClearScreen,
+    Jump(u16),
     JumpWithOffset(u16),
     Call(u16),
     Pop,
@@ -175,6 +176,7 @@ pub fn main() {
     let mut prev_time = Instant::now();
     let mut delay_timer = Duration::from_millis(0);
     let mut sound_timer = Duration::from_millis(0);
+
     while !rl.window_should_close() {
         for (key, is_pressed) in &mut key_downs {
             *is_pressed = rl.is_key_pressed(*key);
@@ -202,9 +204,7 @@ pub fn main() {
                 &mut sound_timer,
                 ins,
             );
-            println!("variable_registers: {:#X?}", &variable_registers);
-            println!("index_register: {:X?}", &index_register);
-            println!("program_counter: {:X?}", &program_counter);
+
             prev_time = current_time;
         }
 
@@ -270,7 +270,7 @@ fn decode(ins: u16) -> Instruction {
         }
         0x01 => {
             let imm = ins & 0xFFF;
-            Instruction::JumpWithOffset(imm)
+            Instruction::Jump(imm)
         }
         0x02 => {
             let imm = ins & 0xFFF;
@@ -381,7 +381,7 @@ fn decode(ins: u16) -> Instruction {
         0x0D => {
             let x_reg = VariableRegister::from((ins >> 8 & 0x0F) as u8);
             let y_reg = VariableRegister::from((ins >> 12 & 0x0F) as u8);
-            let imm = (ins & 0xFF) as u8;
+            let imm = (ins & 0x0F) as u8;
             Instruction::Display {
                 x: x_reg,
                 y: y_reg,
@@ -414,7 +414,10 @@ fn decode(ins: u16) -> Instruction {
                     let imm = (ins >> 8 & 0x0F) as u8;
                     Instruction::Load(imm)
                 }
-                _ => unimplemented!("unknown instruction"),
+                _ => {
+                    println!("unknown instruction: {:X}", ins);
+                    unimplemented!("unknown instruction")
+                }
             }
         }
         _ => unimplemented!("unknown instruction"),
@@ -439,11 +442,15 @@ fn execute(
                 *pixel = false;
             }
         }
-        Instruction::JumpWithOffset(loc) => {
+        Instruction::Jump(loc) => {
+            *program_counter = loc;
+        }
+        Instruction::JumpWithOffset(offset) => {
             // This follows the COSMAC VIP interpreter to jump to address `NNN` plus value in
             // register V0.
-            *program_counter= loc;
-            //*program_counter = *variable_registers.get(&VariableRegister::V0).unwrap() as u16 + loc;
+            let addr = *variable_registers.get(&VariableRegister::V0).unwrap() as u16;
+            let addr = addr + offset;
+            *program_counter = addr;
         }
         Instruction::Pop => {
             let Some(loc) = stack.pop() else {
@@ -467,26 +474,25 @@ fn execute(
             *index_register = imm;
         }
         Instruction::Display { x, y, n } => {
-            let x = (variable_registers.get(&x).unwrap() & 63) as u64;
-            let y = (variable_registers.get(&y).unwrap() & 31) as u64;
+            let x = (variable_registers.get(&x).unwrap() & (GRID_WIDTH - 1) as u8) as u64;
+            let y = (variable_registers.get(&y).unwrap() & (GRID_HEIGHT - 1) as u8) as u64;
             variable_registers
                 .entry(VariableRegister::VF)
                 .and_modify(|v| *v = 0);
             println!(
-                "DISPLAY({:X?}, {:X?}): {:X?}",
+                "Display({:X?}, {:X?}): {:X?}",
                 x,
                 y,
                 &memory[(*index_register as usize)..((*index_register + n as u16) as usize)]
             );
-            for j in 0u64..n as u64{
-                if y + j >= 32 {
+            for j in 0u64..n as u64 {
+                if y + j >= GRID_HEIGHT as u64 {
                     break;
                 }
 
                 let sprite_byte = memory[(*index_register + j as u16) as usize];
-                println!("sprite_byte: {:X}", sprite_byte);
                 for i in 0u64..8 {
-                    if x + i >= 64 {
+                    if x + i >= GRID_WIDTH as u64 {
                         break;
                     }
 
