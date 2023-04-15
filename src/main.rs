@@ -568,7 +568,7 @@ fn execute(
                         .and_modify(|v| *v = 1);
                     variable_registers
                         .entry(x_reg)
-                        .and_modify(|v| *v = (x_val + y_val) & 0xFF);
+                        .and_modify(|v| *v = x_val.wrapping_add(y_val));
                 }
                 Some(val) => {
                     variable_registers
